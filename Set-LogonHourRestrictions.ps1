@@ -51,15 +51,16 @@ function Set-LogonHourRestrictions {
 [byte[]]$Allhours = @(255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255)             
             
 $restrictedUsers = Get-ADUser -Filter * -SearchBase $ou -Properties memberof
-$exemptUsers = Get-ADGroupMember -Identity $exemptGroup
 
 ForEach ($user in $restrictedUsers){
     if (_CheckGroupMembership -user $user -group $exemptGroup){
         Set-ADUser $user -Replace @{logonhours = $Allhours}
         Write-Verbose "User $user is a member of the exemptGroup $exemptGroup and has no restrictions"
+        Write-EventLog -LogName Application -Source ENPTMPS -EventId 42016 -EntryType Information -Message "User $user is a member of the exemptGroup $exemptGroup and has no restrictions"
     } else {
         Set-ADUser $user -Replace @{logonhours = $Officehours}
-        Write-Verbose "$user loginhours have been restricted to $hours"  
+        Write-Verbose "$user loginhours have been restricted to $hours"
+        Write-EventLog -LogName Application -Source ENPTMPS -EventId 42016 -EntryType Information -Message "$user loginhours have been restricted to $hours"
         }
     }
 }
