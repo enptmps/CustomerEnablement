@@ -1,4 +1,4 @@
-﻿function Check-GroupMembership {
+﻿function _CheckGroupMembership {
 
     [CmdletBinding()]
     [Alias()]
@@ -25,33 +25,36 @@ if ($user.memberof -like "$group"){
 
 
 function Set-LogonHourRestrictions {
+#Requires -modules ActiveDirectory
 
     [CmdletBinding()]
     [Alias()]
     [OutputType([int])]
     Param
     (
-        # Param1 help description
+        # Provide the CN of the OU you wish to apply logon hour restrictions to
         [Parameter(Mandatory=$false,
                    ValueFromPipeline=$true,
                    Position=0)]
-        [string]$ou = '<ADD DEFAULT OU>',
+        [string]$OU = '<ADD DEFAULT OU>',
 
-        # Param2 help description
+        # Provide the CN of the Group you wish to exempt from any restriction
         [Parameter(Mandatory=$false)]
-        [string]$exemptGroup =  '<ADD DEFAULT EXEMPT GROUP>'
+        [string]$ExemptGroup =  '<ADD DEFAULT EXEMPT GROUP>'
     )
 
             
-## allow logon 8am - 6pm Monday to Friday            
+# allow logon 8am - 6pm Monday to Friday            
 [byte[]]$Officehours = @(0,0,0,0,255,3,0,255,3,0,255,3,0,255,3,0,255,3,0,0,0)
+
+# allow logon at all hours for exempt users
 [byte[]]$Allhours = @(255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255)             
             
 $restrictedUsers = Get-ADUser -Filter * -SearchBase $ou -Properties memberof
 $exemptUsers = Get-ADGroupMember -Identity $exemptGroup
 
 ForEach ($user in $restrictedUsers){
-    if (Check-GroupMembership -user $user -group $exemptGroup){
+    if (_CheckGroupMembership -user $user -group $exemptGroup){
         Set-ADUser $user -Replace @{logonhours = $Allhours}
         Write-Verbose "User $user is a member of the exemptGroup $exemptGroup and has no restrictions"
     } else {
